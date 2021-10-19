@@ -1,0 +1,688 @@
+@メタル化
+--track0:反転濃度1,0,255,85,1
+--track1:反転濃度2,0,255,170,1
+--track2:ｸﾞﾚｰ処理,0,2,1,1
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.metal(userdata,w,h,obj.track0,obj.track1,obj.track2)
+	obj.putpixeldata(userdata)
+
+@金属質
+--track0:飽和点1,0,255,64,1
+--track1:飽和点2,0,255,178,1
+	local p3=math.floor(obj.track0)
+	local p1=math.floor(obj.track1)
+	p1,p3=math.max(p1,p3),math.min(p1,p3)
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.TritoneV3(userdata,w,h,0xffffff,0xffffff,0x2e1601,p1,p1,p3,0)
+	obj.putpixeldata(userdata)
+
+@黄金質
+--track0:飽和点1,0,255,0,1
+--track1:中心点,0,255,153,1
+--track2:飽和点2,0,255,230,1
+	local p3=math.floor(obj.track0)
+	local p2=math.floor(obj.track1)
+	local p1=math.floor(obj.track2)
+	p1,p3=math.max(p1,p3),math.min(p1,p3)
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.TritoneV3(userdata,w,h,0xffffff,0xfd9501,0x0c0500,p1,p2,p3,0)
+	obj.putpixeldata(userdata)
+
+@ブリーチバイパス
+--track0:強度,0,100,100
+--track1:彩度,0,100,70
+--track2:ガンマ値,1,1000,120
+	require("T_Color_Module")
+	local alp=obj.track0*0.01
+	local sai=alp*obj.track1+(1-alp)*100
+	local r=alp*100/obj.track2+1-alp
+	obj.copybuffer("tmp","obj")
+	obj.setoption("drawtarget","tempbuffer")
+	obj.setoption("blend",5)
+	obj.effect("単色化")
+	obj.draw(0,0,0,1,alp)
+	obj.load("tempbuffer")
+	obj.setoption("blend",0)
+	obj.effect("色調補正","彩度",sai)
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.GammaCorrection(userdata,w,h,r,r,r)
+	obj.putpixeldata(userdata)
+
+@パステル調
+--track0:彩度,0,100,70
+--track1:明度,0,100,70
+--track2:しきい値,0,100,10
+--track3:色付ｴｯｼﾞ,0,100,50
+--dialog:しきい値ぼかし,shw=8;縁補正,local edc=1;エッジ強さ,local pow=100;エッジしきい値,local sh=0;エッジぼかし,local blur=1;
+	require("T_Color_Module")
+	local Ces=obj.track3/100
+	if Ces>0 then
+		obj.setoption("drawtarget","tempbuffer")
+		obj.copybuffer("cache:org","obj")
+		obj.copybuffer("tmp","obj")
+		obj.effect("エッジ抽出","強さ",pow,"しきい値",sh,"輝度エッジを抽出",1,"透明度エッジを抽出",0)
+		obj.effect("縁取り","サイズ",edc,"ぼかし",blur,"color",0xffffff)
+		obj.effect("反転","透明度反転",1)
+		obj.setoption("blend","alpha_sub")
+		obj.draw()
+		obj.setoption("blend",0)
+		obj.copybuffer("cache:Edg","tmp")
+		obj.copybuffer("obj","cache:org")
+	end
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.Pastel(userdata,w,h,obj.track0,obj.track1,obj.track2,shw or 0)
+	obj.putpixeldata(userdata)
+	if Ces>0 then
+		obj.copybuffer("tmp","obj")
+		obj.copybuffer("obj","cache:Edg")
+		obj.draw(0,0,0,1,Ces)
+		obj.copybuffer("obj","tmp")
+	end
+
+@ネオン
+--track0:輝度中心,-200,200,0
+--track1:輝度範囲,1,500,10
+--track2:強度,0,500,100
+--track3:ぼかし,0,500,5
+	require("T_Color_Module")
+	local C=obj.track0/100+0.5
+	local B=obj.track1*0.01
+	local S=obj.track2*0.01
+	local ar=-S/(B*B)
+	local br=ar*(-2*C)
+	local cr=ar*(C*C-B*B)
+	obj.effect("ぼかし","範囲",obj.track3,"サイズ固定",1)
+	T_Color_Module.SetToneCurve(0,0,0,ar,br,cr,0,0,0)
+	T_Color_Module.SetToneCurve(1,0,0,ar,br,cr,0,0,0)
+	T_Color_Module.SetToneCurve(2,0,0,ar,br,cr,0,0,0)
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.SimToneCurve(userdata,w,h, 0)
+	obj.putpixeldata(userdata)
+
+@グレースケール
+--track0:ｸﾞﾚｰ処理,0,2,1,1
+--track1:ガンマ値,1,1000,100
+--dialog:明部色/col,local col1=0xffffff;暗部色/col,local col2=0x0;
+	col1=col1 or 0xffffff
+	col2=col2 or 0x0
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.GrayScale(userdata,w,h,obj.track0,col1,col2,100/obj.track1)
+	obj.putpixeldata(userdata)
+
+@白黒
+--track0:R%,-500,500,100
+--track1:G%,-500,500,100
+--track2:B%,-500,500,100
+--track3:W%,-500,500,100
+--dialog:C%,local C=100;M%,local M=100;Y%,local Y=100;色付け/chk,local Ck=0;└着色/col,local col=0xff0000;ガンマ値,local gm=100;
+	local R=obj.track0*0.01
+	local G=obj.track1*0.01
+	local B=obj.track2*0.01
+	local W=obj.track3*0.01
+	C=(C or 100)*0.01
+	M=(M or 100)*0.01
+	Y=(Y or 100)*0.01
+	Ck=Ck or 0
+	col=col or 0xffffff
+	gm=gm or 100
+	if gm<1 then gm=1 end
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.EnhGrayScale(userdata,w,h,R,G,B,C,M,Y,W,100/gm,Ck,col)
+	obj.putpixeldata(userdata)
+
+@２値化
+--track0:閾値,0,255,128,1
+--track1:ｸﾞﾚｰ処理,0,2,1,1
+--track2:自動判定,0,6,0,1
+--dialog:明部色/col,local col1=0xff0000; 暗部色/col,local col2=0x0000ff;
+--check0:色付け,0;
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.binarization(userdata,w,h,obj.track0,obj.track1,obj.track2,obj.check0,col1,col2)
+	obj.putpixeldata(userdata)
+
+@２値化RGB
+--track0:R閾値,0,255,128,1
+--track1:G閾値,0,255,128,1
+--track2:B閾値,0,255,128,1
+--track3:自動判定,0,6,0,1
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.binarizationRGB(userdata,w,h,obj.track0,obj.track1,obj.track2,obj.track3)
+	obj.putpixeldata(userdata)
+
+@バイアス消去
+--track0:範囲,0,500,30,1
+--track1:補正量,-500,500,100
+--track2:ｵﾌｾｯﾄ,-300,300,0
+--track3:偏差閾値,0,1000,0
+--check0:偏差補正,0;
+	require("T_Color_Module")
+	userdata,w,h=obj.getpixeldata()
+	T_Color_Module.BiasDeletion(userdata,w,h,obj.track0,obj.track1,obj.track2,obj.track3,obj.check0)
+	obj.putpixeldata(userdata)
+
+@粒状化
+--track0:量,0,100,50
+--track1:ｺﾝﾄﾗｽﾄ,-400,400,100
+--track2:シード,1,10000,1,1
+--track3:処理法,1,3,1,1
+--dialog:色1/col,local col1=0xffffff; 色2/col,local col2=0x0;
+--check0:時間変動,0;
+	local N=obj.track2
+	if obj.check0 then
+		N=obj.rand(0,10000,-obj.time*obj.framerate,1)
+	end
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.grainy(userdata,w,h,obj.track0,obj.track1,obj.track3,N,col1,col2)
+	obj.putpixeldata(userdata)
+
+@ガンマ補正
+--track0:赤,1,1000,100
+--track1:緑,1,1000,100
+--track2:青,1,1000,100
+--track3:ALL,1,1000,100
+	require("T_Color_Module")
+	local r,g,b
+	if obj.track3==100 then
+		r=100/obj.track0
+		g=100/obj.track1
+		b=100/obj.track2
+	else
+		r=100/obj.track3
+		g,b=r,r
+	end
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.GammaCorrection(userdata,w,h,r,g,b)
+	obj.putpixeldata(userdata)
+
+@簡易減色
+--track0:減色量,0,7,3,1
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.ColorReduction(userdata,w,h,obj.track0)
+	obj.putpixeldata(userdata)
+
+@減色パレット
+--track0:色数,1,512,16,1
+--track1:X分割,1,20,4,1
+--track2:Y分割,1,20,4,1
+	ClusterReductionIdxC_T={}
+	local idn=obj.track0
+	local nx=obj.track1
+	local ny=obj.track2
+	local idT={}
+	local w,h=obj.getpixel()
+	local dx,dy=w/nx,h/ny
+	ClusterReductionIdxC_T.T={}
+	local k=0
+	for j=0,ny-1 do
+	for i=0,nx-1 do
+		k=k+1
+		if k<=idn then
+			local col,a = obj.getpixel((i+0.5)*dx,(j+0.5)*dy,"col")
+			ClusterReductionIdxC_T.T[k]=col
+		end
+	end
+	end
+	ClusterReductionIdxC_T.N=idn
+	obj.setoption("drawtarget","tempbuffer")
+	obj.copybuffer("tmp","obj")
+	obj.load("figure","四角形",0xff0000,6,1)
+	k=0
+	for j=0,ny-1 do
+	for i=0,nx-1 do
+		k=k+1
+		if k<=idn then
+			obj.draw((i+0.5)*dx-w*0.5,(j+0.5)*dy-0.5*h)
+		end
+	end
+	end
+	obj.copybuffer("obj","tmp")
+
+@メディアンカット減色
+--track0:MC色数,0,500,16,1
+--track1:CL色数,0,500,0,1
+--dialog:指定色1/col,local col1="";指定色2/col,local col2="";指定色3/col,local col3="";指定色4/col,local col4="";指定色5,local col5="";指定色6,local col6="";指定色7,local col7="";指定色8,local col8="";指定色9,local col9="";指定色10,local col10="";色表示/chk,local Cap=0;
+--check0:指定色を有効にする,0;
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	if ClusterReductionIdxC_T then
+		T_Color_Module.DispReduction(userdata,w,h, ClusterReductionIdxC_T.N, ClusterReductionIdxC_T.T)
+		ClusterReductionIdxC_T=nil
+	else
+		local mN=obj.track0
+		local cN=obj.track1
+		local col={}
+		local colN=0	
+		if obj.check0 then
+			local cc={col1,col2,col3,col4,col5,col6,col7,col8,col9,col10}
+			for i=1,10 do
+				if cc[i]~=nil and cc[i]~="" then
+					colN=colN+1
+					col[colN]=cc[i]
+				end
+			end
+		end
+		T_Color_Module.MCutReduction(userdata,w,h,mN,cN,Cap,colN,col)
+	end
+	obj.putpixeldata(userdata)
+
+@拡張コントラスト
+--track0:中心,-255,255,0
+--track1:強度,-200,200,100
+--track2:明るさ,-255,255,0
+--track3:なめらか,0,100,50,0
+--dialog:カーブサイズ,Csiz=260;
+--check0:カーブ表示,0;
+	require("T_Color_Module")
+	if obj.check0 then
+		obj.load("figure","四角形",0xffffff,math.max(100,Csiz or 260))
+	end
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.ExtendedContrast(userdata,w,h,obj.track0,obj.track1,obj.track2,obj.track3/100,obj.check0)
+	obj.putpixeldata(userdata)
+
+@画像トーンカーブ
+--track0:X or R,-10000,10000,0
+--track1:Y or θ,-10000,10000,0
+--track2:角度,-3600,3600,0
+--track3:幅％,1,500,100
+--dialog:中心,CC={0,0};線色/col,local col=0xff0000;線を非表示/chk,local Lck=0;
+--check0:極座標移動,0;
+	col=col or 0x0
+	obj.setanchor("CC",1)
+	require("T_Color_Module")
+	local CSET=obj.track0
+	local userdata,w,h=obj.getpixeldata()
+	local X,Y=obj.track0,obj.track1
+	local Deg=obj.track2
+	if obj.check0 then
+		Deg=Deg+Y
+		X,Y=-X*math.sin(Y/180*math.pi), X*math.cos(Y/180*math.pi)
+	end
+	X,Y=X+CC[1],Y+CC[2]
+	T_Color_Module.ImageToneCurve(userdata,w,h, X, Y, Deg, w*obj.track3*0.01, col, Lck)
+	obj.putpixeldata(userdata)
+	T_ToneCurve_R=1
+	T_ToneCurve_G=1
+	T_ToneCurve_B=1
+
+@簡易トーンカーブ 
+--check0:赤カーブ全体統一,0;
+--dialog:データクリア/chk,local DCL=0;
+--名前の後に全角スペースが入っている・・
+	require("T_Color_Module")
+	local DCL2=DCL or 0
+	if T_ToneCurve_R==nil then T_Color_Module.SetToneCurve(0,0,0,0,1,0,0,0,0) end
+	if T_ToneCurve_G==nil then T_Color_Module.SetToneCurve(1,0,0,0,1,0,0,0,0) end
+	if T_ToneCurve_B==nil then T_Color_Module.SetToneCurve(2,0,0,0,1,0,0,0,0) end
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.SimToneCurve(userdata,w,h, obj.check0)
+	obj.putpixeldata(userdata)
+	if DCL2==1 then
+		T_ToneCurve_R=nil
+		T_ToneCurve_G=nil
+		T_ToneCurve_B=nil
+	end
+
+@イコライズ
+--track0:計算法,0,2,0,1
+	local CType=obj.track0
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	if CType<2 then
+		T_Color_Module.equalize(userdata,w,h,CType)
+	elseif CType==2 then
+		T_Color_Module.equalizeRGB(userdata,w,h)
+	end
+	obj.putpixeldata(userdata)
+
+@シャドウ・ハイライト
+--track0:黒潰補正,-1000,1000,100
+--track1:白飛補正,-1000,1000,100
+--track2:範囲,1,100,10,1
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.Save_G_Image(userdata,w,h)
+	obj.effect("ぼかし","範囲",obj.track2,"サイズ固定",1)
+	userdata,w,h=obj.getpixeldata()
+	T_Color_Module.Shadow_Highlight(userdata,w,h,-obj.track0/100,obj.track1/100)
+	obj.putpixeldata(userdata)
+
+@単色化(T)
+--track0:R,0,255,150
+--track1:G,0,255,0
+--track2:B,0,255,0
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.Monochromatic(userdata,w,h,obj.track0,obj.track1,obj.track2)
+	obj.putpixeldata(userdata)
+
+@単色化(T2)
+--track0:U,-500,500,5
+--track1:V,-500,500,5
+--track2:ガンマ,1,1000,100
+--check0:参考表示,0
+--dialog:極座標指定/chk,local POL=0;
+	require("T_Color_Module")
+	local UU=obj.track0*0.01
+	local VV=obj.track1*0.01
+	local GM=obj.track2*0.01
+	local POL2=POL or 0
+	if POL2==1 then
+		VV=math.pi*(obj.track1)/360
+		UU,VV=UU*math.cos(VV), UU*math.sin(VV)
+	end
+	if obj.check0 then
+		obj.effect("リサイズ","拡大率",100/3)
+		obj.copybuffer("cache:ORI","obj")
+		local w,h=obj.getpixel()
+		obj.setoption("drawtarget","tempbuffer",3*w,3*h)
+		for i=-1,1 do
+		for j=-1,1 do
+			obj.copybuffer("obj","cache:ORI")
+			local userdata,w,h=obj.getpixeldata()
+			T_Color_Module.Monochromatic2(userdata,w,h,UU+i*0.1,VV+j*0.1,GM)
+			obj.putpixeldata(userdata)
+			obj.draw(w*i,-h*j,0)
+		end
+		end
+		obj.load("tempbuffer")
+	else
+		local userdata,w,h=obj.getpixeldata()
+		T_Color_Module.Monochromatic2(userdata,w,h,UU,VV,GM)
+		obj.putpixeldata(userdata)
+	end
+
+@基準色変更
+--track0:変化,0,100,0
+--track1:定数,-1000,1000,0
+--track2:スケール,-1000,1000,100
+--dialog:指定色1/col,local col1=0x0;指定色2/col,local col2=0xffffff;
+--check0:指定色からの距離,0
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.StandardColor(userdata,w,h, col1, col2, obj.track0/100, obj.track1, obj.track2,obj.check0)
+	obj.putpixeldata(userdata)
+
+@特定色域変換T
+--track0:色相範囲,0,360,100
+--track1:彩度範囲,0,255,255
+--track2:輝度調整,0,500,100
+--track3:境界補正,1,360,2
+--dialog:変更前/col,local col1=0x0000ff; 変更後/col,local col2=0xff0000;彩度調整,local pS=100;
+	local pS2=pS or 100
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.ChangeToColor(userdata,w,h, col1, col2, obj.track0, obj.track1, pS2*0.01, obj.track2*0.01, obj.track3)
+	obj.putpixeldata(userdata)
+
+@トライトーン
+--track0:飽和点1,0,255,0,1
+--track1:中心点,0,255,128,1
+--track2:飽和点2,0,255,255,1
+--dialog:ミッドトーン色無視/chk,local egm=0;シャドウ/col,local col3=0x000000; ミッドトーン/col,local col2=0xb5982c; ハイライト/col,local col1=0xffffff;
+--check0:新バージョン,1
+	local p1,p2,p3
+	if obj.check0 then
+		p3=math.floor(obj.track0)
+		p2=math.floor(obj.track1)
+		p1=math.floor(obj.track2)
+		p1,p3=math.max(p1,p3),math.min(p1,p3)
+	else
+		p1,p2,p3=255,128,0
+	end
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.TritoneV3(userdata,w,h,col1,col2,col3,p1,p2,p3,egm or 0)
+	obj.putpixeldata(userdata)
+
+@テトラトーン
+--track0:飽和点1,0,255,0,1
+--track1:中間点1,0,255,85,1
+--track2:中間点2,0,255,170,1
+--track3:飽和点2,0,255,255,1
+--dialog:シャドウ/col,local col1=0x000000;ミッドトーン1/col,local col2=0xff0000; ミッドトーン2/col,local col3=0xffff00; ハイライト/col,local col4=0xffffff; 
+	local p={obj.track0,obj.track1,obj.track2,obj.track3}
+	table.sort(p)
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.Tetratone(userdata,w,h,col1,col2,col3,col4,unpack(p))
+	obj.putpixeldata(userdata)
+
+@簡易コロラマ
+--track0:Fシフト,0,5000,0
+--track1:ｻｲｸﾙ数,0,20,1,0.01
+--track2:最大色数,1,6,6,1
+--dialog:色1/col,local col1=0xffffff;色2/col,local col2=0xffff00;色3/col,local col3=0x00ff00;色4,local col4=0x00ffff;色5,local col5=0x0000ff;色6,local col6=0xff00ff;取得用/col,local col7=0x000000;
+	local maxN=math.floor(obj.track2)
+	if maxN<1 then maxN=6 end
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.Colorama(userdata,w,h,obj.track0/100,obj.track1,maxN,col1,col2,col3,col4,col5,col6)
+	obj.putpixeldata(userdata)
+
+@ポスタリゼーション
+--track0:R階調数,2,256,8,1
+--track1:G階調数,2,256,8,1
+--track2:B階調数,2,256,8,1
+--track3:サイズ,1,1000,1
+--check0:全体をRで調整,0
+--dialog:誤差拡散/chk,local ED=0;
+	local ED2=ED or 0--追加のため
+	local sz=math.max(1,obj.track3)--追加のため
+	local w0,h0
+	require("T_Color_Module")
+	local r,g,b
+	if obj.check0 then
+		r=obj.track0
+		g,b=r,r
+	else
+		r,g,b=obj.track0,obj.track1,obj.track2
+	end
+	if sz>1 then
+		w0,h0=obj.getpixel()
+		obj.effect("リサイズ","拡大率",100/sz)
+	end
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.Posterize(userdata,w,h,r,g,b,ED2)
+	obj.putpixeldata(userdata)
+	if sz>1 then
+		obj.effect("リサイズ","X",w0,"Y",h0,"補間なし",1,"ドット数でサイズ指定",1)
+	end
+
+@最大/最小
+--track0:MAX/MIN,1,2,1,1
+--track1:ﾁｬﾝﾈﾙ,1,4,1,1
+--track2:範囲,1,1000,10,1
+--track3:角度,-3600,3600,0
+--dialog:水平/chk,local HC=1;垂直/chk,local VC=1;縦横比,local asp=100;範囲対称/chk,local Sym=1;色も保存/chk,local svC=0;形状[0..4],local fig=0;限界範囲,local lmt=50;α拡張,local Aen=0;
+--check0:結果を保存(同条件1度のみ),0
+	require("T_Color_Module")
+	local Deg=(-obj.track3)%360
+	local Sym2=Sym or 0
+	local asp2=(asp or 100)/100
+	local svC2=svC or 0
+	local fig2=math.floor(fig or 0)
+	local lmt2=(lmt or 50)
+	local Rng=obj.track2
+	local Aen2=Aen or 0
+	if fig2>0 then
+		if fig2~=3 then
+			Rng=math.min(Rng,lmt2)
+		end
+	end
+	Rng=math.max(1,Rng)
+	local ckr=0
+	if obj.check0 then
+		local userdata,w,h=obj.getpixeldata()
+		ckr=T_Color_Module.MinimaxCheck(userdata,w,h,math.floor(obj.track0),math.floor(obj.track1),Rng,Deg,HC,VC,asp2,Sym2,svC2,fig2,0,0)
+		if ckr==1 then
+			obj.putpixeldata(userdata)
+		end
+	end
+	if ckr==0 then
+		local w0,h0=obj.getpixel()
+		if Deg~=0 then
+			local RR=Deg/180*math.pi
+			local w1=w0*math.abs(math.cos(RR))+h0*math.abs(math.sin(RR))
+			local h1=h0*math.abs(math.cos(RR))+w0*math.abs(math.sin(RR))	
+			local w2=w1+(w1-w0)%2
+			local h2=h1+(h1-h0)%2
+			local RH=0
+			local wr,hr=w0,h0
+			if w1<w0 then
+				obj.effect("ローテーション","90度回転",1)		
+				RH=1
+				wr,hr=hr,wr
+			end 
+			obj.effect("領域拡張","右",w2-wr,"下",h2-hr)
+			local userdata,w,h=obj.getpixeldata()
+			T_Color_Module.MinmaxRot(userdata,w,h,wr,hr,RR,RH,obj.track0)
+			obj.putpixeldata(userdata)
+		end
+		local userdata,w,h=obj.getpixeldata()
+		T_Color_Module.Minimax(userdata,w,h,obj.track0,Rng,obj.track1,HC,VC,Sym2,asp2,svC2,fig2,Aen2)
+		obj.putpixeldata(userdata)
+		if Deg~=0 then
+			obj.setoption("drawtarget","tempbuffer",w0,h0)
+			obj.draw(0,0,0,1,1,0,0,-Deg)
+			obj.copybuffer("obj","tmp")
+		end
+		if obj.check0 then
+			local userdata,w,h=obj.getpixeldata()
+			T_Color_Module.MinimaxSave(userdata,w,h)
+		end
+
+	end
+	obj.cx=0
+	obj.cy=0
+
+@しきい値
+--track0:しきい値1,0,255,0
+--track1:しきい値2,0,255,128
+--track2:判定法,0,4,0,1
+--track3:透明度,-100,100,0
+--dialog:置換色/col,local col=0x0;
+--check0:範囲を反転,0
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.Threshold(userdata,w,h,obj.track0,obj.track1,obj.track2,obj.track3,col,obj.check0)
+	obj.putpixeldata(userdata)
+
+@チャンネルミキサー(SetR)
+--track0:赤←赤％,-300,300,100
+--track1:赤←緑％,-300,300,0
+--track2:赤←青％,-300,300,0
+--track3:赤←定数,-300,300,0
+	ChannelMixerRate=ChannelMixerRate or {}
+	ChannelMixerRate[1]=obj.track0
+	ChannelMixerRate[2]=obj.track1
+	ChannelMixerRate[3]=obj.track2
+	ChannelMixerRate[4]=obj.track3
+
+@チャンネルミキサー(SetG)
+--track0:緑←赤％,-300,300,0
+--track1:緑←緑％,-300,300,100
+--track2:緑←青％,-300,300,0
+--track3:緑←定数,-300,300,0
+	ChannelMixerRate=ChannelMixerRate or {}
+	ChannelMixerRate[5]=obj.track0
+	ChannelMixerRate[6]=obj.track1
+	ChannelMixerRate[7]=obj.track2
+	ChannelMixerRate[8]=obj.track3
+
+@チャンネルミキサー(表示+SetB)
+--track0:青←赤％,-300,300,0
+--track1:青←緑％,-300,300,0
+--track2:青←青％,-300,300,100
+--track3:青←定数,-300,300,0
+--dialog:赤←赤％,local RR=100;赤←緑％,local RG=0;赤←青％,local RB=0;赤←定数,local RC=0;緑←赤％,local GR=0;緑←緑％,local GG=100;緑←青％,local GB=0;緑←定数,local GC=0;青←赤％,local BR=0;青←緑％,local BG=0;青←青％,local BB=100;青←定数,local BC=0;
+	if ChannelMixerRate then
+		ChannelMixerRate[9]=obj.track0
+		ChannelMixerRate[10]=obj.track1
+		ChannelMixerRate[11]=obj.track2
+		ChannelMixerRate[12]=obj.track3
+	else
+		ChannelMixerRate={RR,RG,RB,RC,GR,GG,GB,GC,BR,BG,BB,BC}
+	end
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.ChannelMixer(userdata,w,h,unpack(ChannelMixerRate))
+	obj.putpixeldata(userdata)
+	ChannelMixerRate=nil
+
+@チャンネルシフト
+--track0:アルファ,0,6,0,1
+--track1:赤,0,6,1,1
+--track2:緑,0,6,2,1
+--track3:青,0,6,3,1
+--dialog:チャンネル表示/chk,local Dchk=0;フォントサイズ,local fs=34;
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.ShiftChannels(userdata,w,h,obj.track0,obj.track1,obj.track2,obj.track3)
+	obj.putpixeldata(userdata)
+	if(obj.getinfo("saving")==false and Dchk==1) then
+		obj.setoption("drawtarget","tempbuffer",w,h)
+		obj.draw()
+		local text="チャンネル\n 0:アルファ\n 1:赤\n 2:緑\n 3:青\n 4:色相\n 5:彩度\n 6:明度"
+		obj.setfont("",fs,1,0xffffff,0x000000)
+		obj.load("text",text)
+		obj.draw()
+		obj.load("tempbuffer")
+	end
+
+@サイクルビットシフト
+--track0:R8bit,-100,100,0,1
+--track1:G8bit,-100,100,0,1
+--track2:B8bit,-100,100,0,1
+--track3:24bit,-100,100,0,1
+--check0:24ビットでシフト,0
+	require("T_Color_Module")
+	local r=math.floor(obj.track0)
+	local g=math.floor(obj.track1)
+	local b=math.floor(obj.track2)
+	if obj.check0 then
+		r=math.floor(obj.track3)
+	end
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.CycleBitShift(userdata,w,h,r,g,b,obj.check0)
+	obj.putpixeldata(userdata)
+
+@色抜き
+--track0:色抜き量,0,100,100
+--track1:色差範囲,0,500,50,1
+--track2:エッジ,0,100,50
+--track3:ﾏｯﾁﾝｸﾞ法,1,4,1,1
+--dialog:抽出色/col,local col=0xff0000;ﾏｯﾁﾝｸﾞ法表示/chk,local Dchk=0;フォントサイズ,local fs=34;
+	local r,g,b = RGB(col)
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.LeaveColor(userdata,w,h,r,g,b,obj.track0,obj.track1,obj.track2,obj.track3)
+	obj.putpixeldata(userdata)
+	if(obj.getinfo("saving")==false and Dchk==1) then
+		obj.setoption("drawtarget","tempbuffer",w,h)
+		obj.draw()
+		local text="ﾏｯﾁﾝｸﾞ法\n 1:RGB\n 2:L*a*b*色相\n 3:L*a*b*輝度、色相\n 4:HSV色相"
+		obj.setfont("",fs,1,0xffffff,0x000000)
+		obj.load("text",text)
+		obj.draw()
+		obj.load("tempbuffer")
+	end
+
+@フリンジ修正
+--track0:補正法,0,3,1,1
+--track1:α上限,0,255,255,1
+--track2:α下限,0,255,0,1
+--dialog:背景色/col,local col=0xffffff;処理後α補正/chk,local Af=1;
+	require("T_Color_Module")
+	local userdata,w,h=obj.getpixeldata()
+	T_Color_Module.FringeFix(userdata,w,h,col,obj.track0,obj.track1,obj.track2,Af or 0)
+	obj.putpixeldata(userdata)
